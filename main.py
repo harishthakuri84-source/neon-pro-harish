@@ -2,99 +2,55 @@ import kivy
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.clock import Clock
 import threading
 
-class NeonVideoGenerator(App):
+class NeonBuildManager(App):
     def build(self):
-        self.title = "NEON AI Video Generator PRO"
+        self.layout = BoxLayout(orientation='vertical', padding=40, spacing=20)
         
-        # Main Layout
-        self.layout = BoxLayout(orientation='vertical', padding=30, spacing=20)
+        self.header = Label(text="NEON PRO: Build Manager", font_size='24sp', bold=True)
+        self.layout.add_widget(self.header)
         
-        # Title
-        self.layout.add_widget(Label(
-            text="NEON AI VIDEO GENERATOR", 
-            font_size='28sp', bold=True, size_hint_y=None, height=60
-        ))
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint_y=None, height=40)
+        self.layout.add_widget(self.progress_bar)
         
-        # Prompt Input
-        self.prompt_input = TextInput(
-            hint_text="Yahan likho kaisi video chahiye (e.g. 'A flying car over Mumbai')...",
-            multiline=True, size_hint_y=None, height=120,
-            padding=[10, 10]
-        )
-        self.layout.add_widget(self.prompt_input)
+        self.status_label = Label(text="System IDLE", font_size='18sp')
+        self.layout.add_widget(self.status_label)
         
-        # Progress Bar Layout
-        self.progress_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=100, spacing=10)
-        
-        self.progress_label = Label(text="Taiyar: 0%", font_size='18sp')
-        self.progress_bar = ProgressBar(max=100, value=0, size_hint_y=None, height=20)
-        
-        self.progress_layout.add_widget(self.progress_label)
-        self.progress_layout.add_widget(self.progress_bar)
-        self.layout.add_widget(self.progress_layout)
-        
-        # Generate Button
-        self.gen_btn = Button(
-            text="GENERATE VIDEO",
-            size_hint_y=None, height=70,
-            background_color=(0, 0.6, 1, 1),
-            font_size='20sp', bold=True
-        )
-        self.gen_btn.bind(on_press=self.start_generation)
-        self.layout.add_widget(self.gen_btn)
-        
-        # Placeholder for result
-        self.status_info = Label(text="Waiting for your prompt...", color=(0.7, 0.7, 0.7, 1))
-        self.layout.add_widget(self.status_info)
+        self.start_btn = Button(text="START COMPILATION (.APK & .EXE)", size_hint_y=None, height=70)
+        self.start_btn.bind(on_press=self.start_build_process)
+        self.layout.add_widget(self.start_btn)
         
         return self.layout
 
-    def start_generation(self, instance):
-        prompt = self.prompt_input.text.strip()
-        if not prompt:
-            self.status_info.text = "Bhai, pehle kuch prompt toh likho!"
-            return
-            
-        self.gen_btn.disabled = True
-        self.progress_bar.value = 0
-        self.status_info.text = "AI Server se connect ho raha hai..."
+    def start_build_process(self, instance):
+        self.start_btn.disabled = True
+        threading.Thread(target=self.run_build_logic).start()
+
+    def run_build_logic(self):
+        # Simulation of Buildozer and PyInstaller stages
+        stages = ["Configuring SDK", "Compiling Python Bytecode", "Packing Assets", "Signing APK", "Building EXE"]
+        for i, stage in enumerate(stages):
+            for p in range(0, 101, 20):
+                Clock.schedule_once(lambda dt, s=stage, prog=p: self.update_status(s, prog))
+                import time
+                time.sleep(0.5)
         
-        # Start progress update
-        self.current_progress = 0
-        threading.Thread(target=self.simulate_ai_process).start()
+        Clock.schedule_once(lambda dt: self.final_step())
 
-    def simulate_ai_process(self):
-        # AI video generation process simulation
-        import time
-        import random
+    def update_status(self, stage, prog):
+        self.status_label.text = f"Stage: {stage}... {prog}%"
+        self.progress_bar.value = ((stages_index(stage) * 100) + prog) / 5
         
-        while self.current_progress < 100:
-            time.sleep(random.uniform(0.1, 0.5)) # Simulating GPU processing time
-            self.current_progress += 2
-            if self.current_progress > 100: self.current_progress = 100
-            
-            # UI Update safe way
-            Clock.schedule_once(lambda dt: self.update_ui(self.current_progress))
-            
-        Clock.schedule_once(self.finish_process)
+    def final_step(self):
+        self.status_label.text = "Success! .APK & .EXE Ready in /builds folder."
 
-    def update_ui(self, val):
-        self.progress_bar.value = val
-        self.progress_label.text = f"Generating Video: {val}%"
-        if val > 30: self.status_info.text = "AI Frames render kar raha hai..."
-        if val > 70: self.status_info.text = "Final touches aur encoding chal rahi hai..."
-
-    def finish_process(self, dt):
-        self.progress_label.text = "100% - Video Taiyar Hai!"
-        self.status_info.text = "Video successfully saved in 'NEON_AI_Videos' folder!"
-        self.gen_btn.disabled = False
-        self.prompt_input.text = ""
+# Helper to track stages
+def stages_index(s):
+    return ["Configuring SDK", "Compiling Python Bytecode", "Packing Assets", "Signing APK", "Building EXE"].index(s)
 
 if __name__ == "__main__":
-    NeonVideoGenerator().run()
+    NeonBuildManager().run()
