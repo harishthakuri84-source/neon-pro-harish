@@ -1,16 +1,18 @@
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.button import Button
+from kivymd.app import MDApp
+from kivymd.uix.screen import MDScreen
+from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.textfield import MDTextField
 
-class InderSinghApp(App):
+class VideoGenerator(MDApp):
     def build(self):
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
-        layout.add_widget(Label(text="Inder Singh Investment Portfolio", font_size='24sp'))
-        layout.add_widget(Label(text="Total Assets: ₹15,00,000", font_size='20sp'))
-        layout.add_widget(Button(text="View Portfolio", size_hint=(1, 0.2)))
-        layout.add_widget(Button(text="Add Transaction", size_hint=(1, 0.2)))
-        return layout
+        screen = MDScreen()
+        self.input = MDTextField(hint_text="Enter text for video", pos_hint={'center_x': 0.5, 'center_y': 0.6})
+        btn = MDRaisedButton(text="Generate Video", pos_hint={'center_x': 0.5, 'center_y': 0.4}, on_release=self.start_process)
+        screen.add_widget(self.input)
+        screen.add_widget(btn)
+        return screen
 
-if __name__ == '__main__':
-    InderSinghApp().run()
+    def start_process(self, instance):
+        print("Starting video synthesis...")
+
+VideoGenerator().run()
