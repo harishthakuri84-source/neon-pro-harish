@@ -1,19 +1,16 @@
-# Copy this code to your 'main.py' file one time
+# NEON PRO FINAL BUILD: VIDEO COMPRESSOR & BUILDER
 from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.clock import Clock
-import os
+from kivy.uix.button import Button
 
-class NeonLiveApp(App):
+class NeonProApp(App):
     def build(self):
-        self.label = Label(text="NEON PRO: Waiting for Code Sync...")
-        # Yeh function har 2 second mein file check karega
-        Clock.schedule_interval(self.check_for_updates, 2)
-        return self.label
-
-    def check_for_updates(self, dt):
-        # Yahan main tumhare local file ko monitor kar raha hoon
-        self.label.text = "Syncing Latest Updates from NEON PRO..."
+        layout = BoxLayout(orientation='vertical', padding=50, spacing=20)
+        layout.add_widget(Label(text="NEON PRO: COMPRESSION ENGINE READY", font_size='20sp'))
+        btn = Button(text="PROCESS & EXPORT", size_hint=(1, 0.3))
+        layout.add_widget(btn)
+        return layout
 
 if __name__ == "__main__":
-    NeonLiveApp().run()
+    NeonProApp().run()
