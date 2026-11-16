@@ -1,17 +1,12 @@
-import kivy
 from kivy.app import App
 from kivy.uix.label import Label
-import speech_recognition as sr
-import pyttsx3
+from android.permissions import request_permissions, Permission
 
-class NeonVoiceApp(App):
+class PermissionApp(App):
     def build(self):
-        self.engine = pyttsx3.init()
-        return Label(text="NEON PRO: Voice Active... Bol bhai!")
-
-    def speak(self, text):
-        self.engine.say(text)
-        self.engine.runAndWait()
+        # Android storage permission request
+        request_permissions([Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE])
+        return Label(text="Permission Requested. Now you can download files!")
 
 if __name__ == '__main__':
-    NeonVoiceApp().run()
+    PermissionApp().run()
