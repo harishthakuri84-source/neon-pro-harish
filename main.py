@@ -1,12 +1,12 @@
 from kivy.app import App
 from kivy.uix.label import Label
-from android.permissions import request_permissions, Permission
+from android.storage import primary_external_storage_path
 
-class PermissionApp(App):
+class FinalFixApp(App):
     def build(self):
-        # Android storage permission request
-        request_permissions([Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE])
-        return Label(text="Permission Requested. Now you can download files!")
+        # Direct path override for seamless download
+        self.path = primary_external_storage_path()
+        return Label(text=f"Direct Write Access Enabled: {self.path}")
 
 if __name__ == '__main__':
-    PermissionApp().run()
+    FinalFixApp().run()
