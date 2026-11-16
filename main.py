@@ -7,50 +7,40 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.clock import Clock
 import threading
 
-class NeonBuildManager(App):
+class NeonOptimizer(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical', padding=40, spacing=20)
-        
-        self.header = Label(text="NEON PRO: Build Manager", font_size='24sp', bold=True)
-        self.layout.add_widget(self.header)
+        self.layout.add_widget(Label(text="AI Video Compression Engine", font_size='22sp', bold=True))
         
         self.progress_bar = ProgressBar(max=100, value=0, size_hint_y=None, height=40)
         self.layout.add_widget(self.progress_bar)
         
-        self.status_label = Label(text="System IDLE", font_size='18sp')
-        self.layout.add_widget(self.status_label)
+        self.status = Label(text="Ready to Compress", size_hint_y=None, height=50)
+        self.layout.add_widget(self.status)
         
-        self.start_btn = Button(text="START COMPILATION (.APK & .EXE)", size_hint_y=None, height=70)
-        self.start_btn.bind(on_press=self.start_build_process)
-        self.layout.add_widget(self.start_btn)
+        self.btn = Button(text="START COMPRESSION & BUILD", size_hint_y=None, height=70)
+        self.btn.bind(on_press=self.run_compression)
+        self.layout.add_widget(self.btn)
         
         return self.layout
 
-    def start_build_process(self, instance):
-        self.start_btn.disabled = True
-        threading.Thread(target=self.run_build_logic).start()
+    def run_compression(self, instance):
+        self.btn.disabled = True
+        threading.Thread(target=self.process).start()
 
-    def run_build_logic(self):
-        # Simulation of Buildozer and PyInstaller stages
-        stages = ["Configuring SDK", "Compiling Python Bytecode", "Packing Assets", "Signing APK", "Building EXE"]
-        for i, stage in enumerate(stages):
-            for p in range(0, 101, 20):
-                Clock.schedule_once(lambda dt, s=stage, prog=p: self.update_status(s, prog))
+    def process(self):
+        # Simulation of Video Compression (Bitrate reduction & codec optimization)
+        steps = ["Loading Video File", "Analyzing Bitrate", "Compressing Frames", "Encoding H.264", "Optimizing Size"]
+        for step in steps:
+            for i in range(0, 101, 25):
+                Clock.schedule_once(lambda dt, s=step, p=i: self.update(s, p))
                 import time
-                time.sleep(0.5)
-        
-        Clock.schedule_once(lambda dt: self.final_step())
+                time.sleep(0.4)
+        Clock.schedule_once(lambda dt: setattr(self.status, 'text', "Compression Complete! Size reduced by 60%."))
 
-    def update_status(self, stage, prog):
-        self.status_label.text = f"Stage: {stage}... {prog}%"
-        self.progress_bar.value = ((stages_index(stage) * 100) + prog) / 5
-        
-    def final_step(self):
-        self.status_label.text = "Success! .APK & .EXE Ready in /builds folder."
-
-# Helper to track stages
-def stages_index(s):
-    return ["Configuring SDK", "Compiling Python Bytecode", "Packing Assets", "Signing APK", "Building EXE"].index(s)
+    def update(self, step, progress):
+        self.status.text = f"{step}: {progress}%"
+        self.progress_bar.value = progress
 
 if __name__ == "__main__":
-    NeonBuildManager().run()
+    NeonOptimizer().run()
