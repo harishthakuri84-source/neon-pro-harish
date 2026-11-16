@@ -1,18 +1,15 @@
+import pyttsx3
 from kivymd.app import MDApp
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.button import MDRaisedButton
-from kivymd.uix.textfield import MDTextField
+from kivymd.uix.label import MDLabel
 
-class VideoGenerator(MDApp):
+class NeonProVoice(MDApp):
     def build(self):
-        screen = MDScreen()
-        self.input = MDTextField(hint_text="Enter text for video", pos_hint={'center_x': 0.5, 'center_y': 0.6})
-        btn = MDRaisedButton(text="Generate Video", pos_hint={'center_x': 0.5, 'center_y': 0.4}, on_release=self.start_process)
-        screen.add_widget(self.input)
-        screen.add_widget(btn)
-        return screen
+        self.engine = pyttsx3.init()
+        return MDLabel(text="Voice Engine Active: Harish, I am here!", halign="center")
 
-    def start_process(self, instance):
-        print("Starting video synthesis...")
+    def on_start(self):
+        self.engine.say("Hello Harish, main sun sakta hoon aur ab bol bhi paunga.")
+        self.engine.runAndWait()
 
-VideoGenerator().run()
+if __name__ == "__main__":
+    NeonProVoice().run()
