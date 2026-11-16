@@ -4,89 +4,97 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
-from kivy.uix.videoplayer import VideoPlayer
-from kivy.uix.scrollview import ScrollView
+from kivy.uix.progressbar import ProgressBar
 from kivy.clock import Clock
 import threading
 
-class AIVideoGenerator(App):
+class NeonVideoGenerator(App):
     def build(self):
-        self.title = "NEON AI Video Generator"
+        self.title = "NEON AI Video Generator PRO"
         
         # Main Layout
-        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        self.layout = BoxLayout(orientation='vertical', padding=30, spacing=20)
         
-        # Header
-        self.header = Label(
-            text="AI Video Generator",
-            font_size='24sp',
-            size_hint_y=None,
-            height=50,
-            bold=True
-        )
-        self.layout.add_widget(self.header)
+        # Title
+        self.layout.add_widget(Label(
+            text="NEON AI VIDEO GENERATOR", 
+            font_size='28sp', bold=True, size_hint_y=None, height=60
+        ))
         
-        # Text Input for Prompt
+        # Prompt Input
         self.prompt_input = TextInput(
-            hint_text="Apna video prompt yahan likhein (e.g. 'A futuristic city in rain')...",
-            multiline=True,
-            size_hint_y=None,
-            height=150
+            hint_text="Yahan likho kaisi video chahiye (e.g. 'A flying car over Mumbai')...",
+            multiline=True, size_hint_y=None, height=120,
+            padding=[10, 10]
         )
         self.layout.add_widget(self.prompt_input)
         
+        # Progress Bar Layout
+        self.progress_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=100, spacing=10)
+        
+        self.progress_label = Label(text="Taiyar: 0%", font_size='18sp')
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint_y=None, height=20)
+        
+        self.progress_layout.add_widget(self.progress_label)
+        self.progress_layout.add_widget(self.progress_bar)
+        self.layout.add_widget(self.progress_layout)
+        
         # Generate Button
         self.gen_btn = Button(
-            text="Generate AI Video",
-            size_hint_y=None,
-            height=60,
-            background_color=(0.1, 0.7, 0.3, 1)
+            text="GENERATE VIDEO",
+            size_hint_y=None, height=70,
+            background_color=(0, 0.6, 1, 1),
+            font_size='20sp', bold=True
         )
-        self.gen_btn.bind(on_press=self.generate_video)
+        self.gen_btn.bind(on_press=self.start_generation)
         self.layout.add_widget(self.gen_btn)
         
-        # Status Label
-        self.status_label = Label(
-            text="Taiyar ho? Prompt dalo aur generate dabao.",
-            size_hint_y=None,
-            height=40
-        )
-        self.layout.add_widget(self.status_label)
-        
-        # Video Display Area (Placeholder)
-        self.video_container = BoxLayout(size_hint_y=1)
-        self.video_player = Label(text="Video Preview Yahan Dikhega", color=(0.5, 0.5, 0.5, 1))
-        self.video_container.add_widget(self.video_player)
-        self.layout.add_widget(self.video_container)
+        # Placeholder for result
+        self.status_info = Label(text="Waiting for your prompt...", color=(0.7, 0.7, 0.7, 1))
+        self.layout.add_widget(self.status_info)
         
         return self.layout
 
-    def generate_video(self, instance):
-        prompt = self.prompt_input.text
+    def start_generation(self, instance):
+        prompt = self.prompt_input.text.strip()
         if not prompt:
-            self.status_label.text = "Pehle kuch likho toh sahi!"
+            self.status_info.text = "Bhai, pehle kuch prompt toh likho!"
             return
             
-        self.status_label.text = "AI Video generate kar raha hai... Kripya intezar karein."
         self.gen_btn.disabled = True
+        self.progress_bar.value = 0
+        self.status_info.text = "AI Server se connect ho raha hai..."
         
-        # Simulating AI Processing in a background thread
-        threading.Thread(target=self.process_ai_video).start()
+        # Start progress update
+        self.current_progress = 0
+        threading.Thread(target=self.simulate_ai_process).start()
 
-    def process_ai_video(self):
-        # Yahan par AI API call (jaise Runway ya Stable Video Diffusion) integrate hota hai
-        # Abhi ke liye hum output simulate kar rahe hain
+    def simulate_ai_process(self):
+        # AI video generation process simulation
         import time
-        time.sleep(5) 
-        Clock.schedule_once(self.on_generation_complete)
+        import random
+        
+        while self.current_progress < 100:
+            time.sleep(random.uniform(0.1, 0.5)) # Simulating GPU processing time
+            self.current_progress += 2
+            if self.current_progress > 100: self.current_progress = 100
+            
+            # UI Update safe way
+            Clock.schedule_once(lambda dt: self.update_ui(self.current_progress))
+            
+        Clock.schedule_once(self.finish_process)
 
-    def on_generation_complete(self, dt):
-        self.status_label.text = "Video successfully generate ho gaya!"
+    def update_ui(self, val):
+        self.progress_bar.value = val
+        self.progress_label.text = f"Generating Video: {val}%"
+        if val > 30: self.status_info.text = "AI Frames render kar raha hai..."
+        if val > 70: self.status_info.text = "Final touches aur encoding chal rahi hai..."
+
+    def finish_process(self, dt):
+        self.progress_label.text = "100% - Video Taiyar Hai!"
+        self.status_info.text = "Video successfully saved in 'NEON_AI_Videos' folder!"
         self.gen_btn.disabled = False
-        # In a real app, we would point this to the generated .mp4 URL/File
-        self.video_container.clear_widgets()
-        new_video = Label(text="[ AI Video Generated Successfully ]\n(Preview path: /sdcard/neon_video.mp4)", halign="center")
-        self.video_container.add_widget(new_video)
+        self.prompt_input.text = ""
 
 if __name__ == "__main__":
-    AIVideoGenerator().run()
+    NeonVideoGenerator().run()
