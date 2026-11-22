@@ -1,17 +1,16 @@
-# Updated build configuration for stable installation
-from kivy.config import Config
-Config.set('graphics', 'resizable', True)
-
-# Ensuring unique build identifier
+# NEON PRO ENGINE: New App Instance Generator
 import os
-os.environ['KIVY_BUILD_ID'] = 'com.neonpro.text2video.v2'
 
-class NeonEngine:
-    def __init__(self):
-        self.signature = "NEON_PRO_STABLE_BUILD"
-        
-    def resolve_token_conflict(self):
-        # Auto-clearing cache during build to prevent signature mismatch
-        return "System ready for fresh install"
+def create_fresh_project(app_name, package_name):
+    # Generating unique build environment
+    build_settings = {
+        "title": app_name,
+        "package": package_name,
+        "icon": "assets/custom_icon.png", # Unique icon handle
+        "version": "1.0.0"
+    }
+    return build_settings
 
-# Build configuration updated for smooth APK installation
+# New App Config
+app_config = create_fresh_project("NeonTool_001", "com.neonpro.tool001")
+print(f"Starting {app_config['title']} with {app_config['package']}...")
