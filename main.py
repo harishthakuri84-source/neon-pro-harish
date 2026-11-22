@@ -1,14 +1,22 @@
+from kivy.app import App
+from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout
 from moviepy.editor import TextClip, CompositeVideoClip
-import cv2
 
-def create_video_from_text(text, output_file="output_video.mp4"):
-    # Text clip setup
-    clip = TextClip(text, fontsize=70, color='white', bg_color='black', size=(1280, 720))
-    clip = clip.set_duration(5)
-    
-    # Exporting
-    video = CompositeVideoClip([clip])
-    video.write_videofile(output_file, fps=24)
+class NeonVideoApp(App):
+    def build(self):
+        layout = BoxLayout(orientation='vertical')
+        self.input = TextInput(hint_text='Enter text here...')
+        btn = Button(text='Generate Video', on_press=self.generate)
+        layout.add_widget(self.input)
+        layout.add_widget(btn)
+        return layout
 
-# Example usage
-create_video_from_text("Harish, aapka video ready hai!")
+    def generate(self, instance):
+        text = self.input.text
+        clip = TextClip(text, fontsize=50, color='white', size=(720, 1280))
+        clip.set_duration(3).write_videofile("output.mp4", fps=24)
+
+if __name__ == '__main__':
+    NeonVideoApp().run()
