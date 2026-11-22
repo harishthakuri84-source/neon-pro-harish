@@ -1,0 +1,22 @@
+// Permanent Android Release Signing Configuration (v1 + v2)
+android {
+    signingConfigs {
+        release {
+            def ksPath = System.getenv('NEON_KEYSTORE_PATH') ?: 'signing/neon-release.keystore'
+            def ksFile = file(ksPath)
+            if (ksFile.exists()) {
+                storeFile ksFile
+                storePassword System.getenv('NEON_KEYSTORE_PASSWORD') ?: 'NeonProReleaseKey2026!'
+                keyAlias System.getenv('NEON_KEY_ALIAS') ?: 'neonpro-release'
+                keyPassword System.getenv('NEON_KEY_PASSWORD') ?: (System.getenv('NEON_KEYSTORE_PASSWORD') ?: 'NeonProReleaseKey2026!')
+                v1SigningEnabled true
+                v2SigningEnabled true
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+}

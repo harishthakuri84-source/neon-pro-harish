@@ -1,12 +1,14 @@
-from kivy.app import App
-from kivy.uix.label import Label
-from android.storage import primary_external_storage_path
+from moviepy.editor import TextClip, CompositeVideoClip
+import cv2
 
-class FinalFixApp(App):
-    def build(self):
-        # Direct path override for seamless download
-        self.path = primary_external_storage_path()
-        return Label(text=f"Direct Write Access Enabled: {self.path}")
+def create_video_from_text(text, output_file="output_video.mp4"):
+    # Text clip setup
+    clip = TextClip(text, fontsize=70, color='white', bg_color='black', size=(1280, 720))
+    clip = clip.set_duration(5)
+    
+    # Exporting
+    video = CompositeVideoClip([clip])
+    video.write_videofile(output_file, fps=24)
 
-if __name__ == '__main__':
-    FinalFixApp().run()
+# Example usage
+create_video_from_text("Harish, aapka video ready hai!")

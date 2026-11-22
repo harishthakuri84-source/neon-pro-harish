@@ -1,8 +1,12 @@
-name: NEON PRO - Build Android APK & Windows EXE
+name: NEON PRO - Build Verified Signed Release APK & Windows EXE
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - '**'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 concurrency:
   group: neon-pro-build-${{ github.ref }}
@@ -10,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Signed Installable Android APK
+    name: Build Verified Signed Release Android APK
     runs-on: ubuntu-22.04
     timeout-minutes: 35
     steps:
@@ -22,11 +26,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Install Buildozer Deps
+      - name: Install Buildozer & APK Signing Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential git zip unzip patch ant lbzip2 xz-utils openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake ccache lld libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
-      - name: Cache Buildozer
+          sudo apt-get install -y build-essential git zip unzip patch ant lbzip2 xz-utils openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake ccache lld libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev apksigner zipalign
+      - name: Cache Buildozer & Gradle
         uses: actions/cache@v6
         with:
           path: |
@@ -36,17 +40,104 @@ jobs:
           key: ubuntu22-v4-buildozer-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
             ubuntu22-v4-buildozer-
-      - name: Build APK
+      - name: Restore or Cache Release Keystore
+        uses: actions/cache@v6
+        with:
+          path: signing/neon-release.keystore
+          key: neon-release-keystore-v1-${{ github.repository }}
+      - name: Prepare Automatic Release Keystore & Signing Config
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p signing
+          KEYSTORE_PATH="${GITHUB_WORKSPACE}/signing/neon-release.keystore"
+          KEY_ALIAS="${ANDROID_KEY_ALIAS:-neonpro-release}"
+          STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-NeonProReleaseKey2026!}"
+          KEY_PASS="${ANDROID_KEY_PASSWORD:-$STORE_PASS}"
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          elif [ ! -f "$KEYSTORE_PATH" ]; then
+            keytool -genkeypair -v -storetype PKCS12 -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$STORE_PASS" -keypass "$KEY_PASS" -dname "CN=NEON PRO Release, OU=Autonomous Mobile, O=Harish Studio, L=India, ST=India, C=IN"
+          fi
+          {
+            echo "P4A_RELEASE_KEYSTORE=$KEYSTORE_PATH"
+            echo "P4A_RELEASE_KEYSTORE_PASSWD=$STORE_PASS"
+            echo "P4A_RELEASE_KEYALIAS=$KEY_ALIAS"
+            echo "P4A_RELEASE_KEYALIAS_PASSWD=$KEY_PASS"
+            echo "NEON_KEYSTORE_PATH=$KEYSTORE_PATH"
+            echo "NEON_KEYSTORE_PASSWORD=$STORE_PASS"
+            echo "NEON_KEY_ALIAS=$KEY_ALIAS"
+            echo "NEON_KEY_PASSWORD=$KEY_PASS"
+          } >> "$GITHUB_ENV"
+      - name: Build Release Android APK (Buildozer + Gradle Signing)
         run: |
           python -m pip install --upgrade pip
           pip install --upgrade "setuptools<66.0.0" wheel virtualenv cython==0.29.36 buildozer
-          yes | buildozer -v android debug
-      - name: Upload APK
+          if [ -f app/build.gradle ] && [ -f signing/signing.gradle ] && ! grep -q 'signing/signing.gradle' app/build.gradle; then
+            echo '' >> app/build.gradle
+            echo 'apply from: rootProject.file("signing/signing.gradle")' >> app/build.gradle
+          fi
+          yes | buildozer -v android release
+      - name: Align (zipalign), Sign (v1 + v2 + v3 apksigner) & Clean Unsigned APKs
+        run: |
+          set -euo pipefail
+          RAW_APK="$(find bin -maxdepth 1 -type f -name *.apk | head -n 1)"
+          test -n "$RAW_APK"
+          ZIPALIGN="$(find .buildozer "$HOME/.buildozer" "${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}" -name zipalign -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          APKSIGNER="$(find .buildozer "$HOME/.buildozer" "${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}" -name apksigner -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          ZIPALIGN="${ZIPALIGN:-$(command -v zipalign)}"
+          APKSIGNER="${APKSIGNER:-$(command -v apksigner)}"
+          APP_VER="$(grep -E "^version[[:space:]]*=" buildozer.spec | head -n 1 | cut -d"=" -f2 | tr -d "[:space:]" || echo 0.4)"
+          APP_VER="${APP_VER:-0.4}"
+          WORK_APK="bin/work-unsigned.apk"
+          ALIGNED_APK="bin/work-aligned.apk"
+          SIGNED_APK="bin/NEON-PRO-v${APP_VER}-release-signed.apk"
+          cp "$RAW_APK" "$WORK_APK"
+          zip -d "$WORK_APK" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" "META-INF/*.EC" "META-INF/MANIFEST.MF" >/dev/null 2>&1 || true
+          "$ZIPALIGN" -f -p -v 4 "$WORK_APK" "$ALIGNED_APK" | tail -n 10
+          "$APKSIGNER" sign --ks "$NEON_KEYSTORE_PATH" --ks-key-alias "$NEON_KEY_ALIAS" --ks-pass "pass:${NEON_KEYSTORE_PASSWORD}" --key-pass "pass:${NEON_KEY_PASSWORD}" --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$SIGNED_APK" "$ALIGNED_APK"
+          find bin -maxdepth 1 -type f -name "*.apk" ! -name "$(basename "$SIGNED_APK")" -delete
+          rm -f bin/*.idsig
+          echo "SIGNED_APK_PATH=$SIGNED_APK" >> "$GITHUB_ENV"
+          echo "SIGNED_APK_NAME=$(basename "$SIGNED_APK")" >> "$GITHUB_ENV"
+          echo "APP_VER=$APP_VER" >> "$GITHUB_ENV"
+      - name: Verify Signed Release APK (Strict v1 + v2 apksigner Check)
+        run: |
+          set -euo pipefail
+          APKSIGNER="$(find .buildozer "$HOME/.buildozer" "${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}" -name apksigner -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          APKSIGNER="${APKSIGNER:-$(command -v apksigner)}"
+          VERIFY_OUT="$("$APKSIGNER" verify --verbose --print-certs "$SIGNED_APK_PATH" 2>&1)"
+          echo "$VERIFY_OUT"
+          echo "$VERIFY_OUT" | grep -q "Verified using v1 scheme (JAR signing): true"
+          echo "$VERIFY_OUT" | grep -q "Verified using v2 scheme (APK Signature Scheme v2): true"
+          unzip -t "$SIGNED_APK_PATH" | tail -n 5
+      - name: Upload Verified Signed Release APK Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: NeonMobile-Android-APK
-          path: bin/*.apk
+          name: NeonMobile-Android-Release-Signed-APK
+          path: bin/*-release-signed.apk
           if-no-files-found: error
+      - name: Publish Verified Release APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="v${APP_VER}-signed"
+          TITLE="NEON PRO v${APP_VER} (Verified Signed Release)"
+          NOTES="Automatically signed (v1 + v2 + v3) and verified via apksigner. Ready for direct Android installation."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            for asset in $(gh release view "$TAG" --json assets --jq ".assets[].name" || true); do
+              case "$asset" in *unsigned*.apk|*debug*.apk|*.idsig) gh release delete-asset "$TAG" "$asset" --yes || true ;; esac
+            done
+            gh release upload "$TAG" "$SIGNED_APK_PATH" --clobber
+            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --latest
+          else
+            gh release create "$TAG" "$SIGNED_APK_PATH" --title "$TITLE" --notes "$NOTES" --latest
+          fi
 
   build_exe:
     name: Build Windows Standalone EXE
